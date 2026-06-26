@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .auth import usuario_actual
-from .db import conexion, dict_cursor, esperar_bd, init_schema
+from .db import conexion, dict_cursor, esperar_bd, init_schema, ping
 
 
 @asynccontextmanager
@@ -57,6 +57,16 @@ class ReclamarRequest(BaseModel):
 #   - liveness: ¿el proceso está vivo? (respuesta simple).
 #   - readiness: ¿está listo para recibir tráfico? Debe verificar la BD.
 # Luego configurar livenessProbe/readinessProbe en el Deployment de EKS.
+
+@app.get("/livez")
+def liveness():
+    return {"status": True}
+
+@app.get("/readyz")
+def readiness():
+    if not ping():
+        raise HTTPException(status_code=503, detail={"status": "not-ready", "db": "down"})
+    return {"status": "ready", "db": "up"}
 
 
 @app.get("/api/bonos")
